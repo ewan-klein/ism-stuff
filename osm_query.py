@@ -74,7 +74,7 @@ def shop_nodes(format='csv'):
 
 if __name__ == "__main__":
 
-    with open('shops.csv', 'w', encoding='utf8') as csvfile:
+    with open('edinburgh_shops_from_osm.csv', 'w', encoding='utf8') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerows(shop_nodes())
 
