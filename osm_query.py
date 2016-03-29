@@ -1,10 +1,11 @@
+"""
+Queries to extract data from OSM using the Overpass API
+"""
+
 import overpy
 import csv
 
 api = overpy.Overpass()
-
-
-
 
 
 def taxi_nodes():
@@ -41,10 +42,9 @@ def shop_nodes(format='csv'):
         rows = [['Name', 'Type', 'Hours', 'Accessible', 'Lat', 'Long']]
         for node in result.nodes:
             row = []
-            row.append(node.tags.get("name","N/A"))
+            row.append(node.tags.get("name"))
             row.append(node.tags.get("shop"))
             row.append(node.tags.get("opening_hours"))
-            row.append(node.tags.get("hours"))
             row.append(node.tags.get("wheelchair"))
             row.append('{}'.format(node.lat))
             row.append('{}'.format(node.lon))
