@@ -2,10 +2,30 @@
 Queries to extract data from OSM using the Overpass API
 """
 
+import datetime
 import overpy
 import csv
 
+
+
 api = overpy.Overpass()
+
+def timestamped_csvfile(fn):
+    """
+    Add timestamp to a filename
+    """
+    today = "{:%d-%m-%Y}".format(datetime.date.today())
+    fn = "{}_{}.csv".format(fn, today)
+    return fn
+
+
+def cats2fields(node, cats):
+    row = []
+    for cat in cats:
+        row.append(node.tags.get(cat))
+    row.append('{}'.format(node.lat))
+    row.append('{}'.format(node.lon))
+    return row
 
 
 def taxi_nodes():
@@ -26,7 +46,10 @@ def taxi_nodes():
 
 
 
-def shop_nodes(format='csv'):
+def shop_nodes(format='csv', verbose=True):
+    """
+    Retrieve Edinburgh shops from OSM
+    """
 
     result = api.query("""
     (
@@ -38,17 +61,13 @@ def shop_nodes(format='csv'):
     out body;
     """)
 
+    if verbose:
+        print("Nodes retrieved: {}".format(len(result.nodes)))
     if csv:
         rows = [['Name', 'Type', 'Hours', 'Accessible', 'Lat', 'Long']]
+        cats = ["name", "shop", "opening_hours", "wheelchair"]
         for node in result.nodes:
-            row = []
-            row.append(node.tags.get("name"))
-            row.append(node.tags.get("shop"))
-            row.append(node.tags.get("opening_hours"))
-            row.append(node.tags.get("wheelchair"))
-            row.append('{}'.format(node.lat))
-            row.append('{}'.format(node.lon))
-
+            row = cats2fields(node, cats)
             rows.append(row)
         return rows
     else:
@@ -74,8 +93,12 @@ def shop_nodes(format='csv'):
 
 if __name__ == "__main__":
 
-    with open('edinburgh_shops_from_osm.csv', 'w', encoding='utf8') as csvfile:
+
+    fn = timestamped_csvfile('edinburgh_shops_from_osm')
+
+    with open(fn, 'w', encoding='utf8') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerows(shop_nodes())
+        print("Written rows to {}".format(fn))
 
 
