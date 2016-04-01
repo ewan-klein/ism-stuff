@@ -97,7 +97,7 @@ if __name__ == "__main__":
     fn = timestamped_csvfile('edinburgh_shops_from_osm')
 
     with open(fn, 'w', encoding='utf8') as csvfile:
-        writer = csv.writer(csvfile)
+        writer = csv.writer(csvfile, lineterminator='\n')
         writer.writerows(shop_nodes())
         print("Written rows to {}".format(fn))
 
