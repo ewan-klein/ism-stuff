@@ -20,21 +20,27 @@ def timestamped_csvfile(fn):
     return fn
 
 
-def cats2fields(node, cats):
+def cats2fields(osmobject, cats):
     row = []
     for cat in cats:
-        row.append(node.tags.get(cat))
-    row.append('{}'.format(node.lat))
-    row.append('{}'.format(node.lon))
+        row.append(osmobject.tags.get(cat))
+    try:
+        row.append('{}'.format(osmobject.lat))
+        row.append('{}'.format(osmobject.lon))
+    except AttributeError:
+        pass
     return row
 
 
 def centroid(nodelist):
+    """
+    Returns a Shapely point
+    """
     poly = [(float(node.lat), float(node.lon)) for node in nodelist]
 
     linestring = LineString(poly)
-    point = linestring.centroid
-    return (point.x, point.y)
+    return linestring.centroid
+
 
 def taxi_nodes():
     result = api.query("""
@@ -63,19 +69,24 @@ def shop_nodes(querystring, format='csv', verbose=True):
 
     if verbose:
         print("Nodes retrieved: {}".format(len(result.nodes)))
+        print("Ways retrieved: {}".format(len(result.ways)))
     if csv:
         rows = [['Name', 'Type', 'Hours', 'Accessible', 'Lat', 'Long']]
         cats = ["name", "shop", "opening_hours", "wheelchair"]
-        #for node in result.nodes:
-            #row = cats2fields(node, cats)
-            #rows.append(row)
+        for node in result.nodes:
+            row = cats2fields(node, cats)
+            rows.append(row)
 
         for way in result.ways:
+            row = cats2fields(way, cats)
             nodelist = way.nodes
             c = centroid(nodelist)
-            pass
+            row.extend([c.x, c.y])
+            rows.append(row)
 
 
+    if verbose:
+        print("Total rows: {}".format(len(rows)))
 
         return rows
     else:
@@ -148,6 +159,8 @@ bikepath_query = """\
     (._;>;);
     out body;
 """
+
+
 
 def extract_shops():
     fn = timestamped_csvfile('edinburgh_shops_from_osm')
