@@ -6,6 +6,7 @@ import datetime
 import overpy
 import csv
 
+from shapely.geometry import LineString
 
 
 api = overpy.Overpass()
@@ -28,6 +29,13 @@ def cats2fields(node, cats):
     return row
 
 
+def centroid(nodelist):
+    poly = [(float(node.lat), float(node.lon)) for node in nodelist]
+
+    linestring = LineString(poly)
+    point = linestring.centroid
+    return (point.x, point.y)
+
 def taxi_nodes():
     result = api.query("""
     (
@@ -46,29 +54,29 @@ def taxi_nodes():
 
 
 
-def shop_nodes(format='csv', verbose=True):
+def shop_nodes(querystring, format='csv', verbose=True):
     """
     Retrieve Edinburgh shops from OSM
     """
 
-    result = api.query("""
-    (
-    node
-        ["shop"]
-        (55.867,-3.417,56.021,-2.947);
-    );
-    (._;>;);
-    out body;
-    """)
+    result = api.query(querystring)
 
     if verbose:
         print("Nodes retrieved: {}".format(len(result.nodes)))
     if csv:
         rows = [['Name', 'Type', 'Hours', 'Accessible', 'Lat', 'Long']]
         cats = ["name", "shop", "opening_hours", "wheelchair"]
-        for node in result.nodes:
-            row = cats2fields(node, cats)
-            rows.append(row)
+        #for node in result.nodes:
+            #row = cats2fields(node, cats)
+            #rows.append(row)
+
+        for way in result.ways:
+            nodelist = way.nodes
+            c = centroid(nodelist)
+            pass
+
+
+
         return rows
     else:
         for node in result.nodes:
@@ -77,11 +85,18 @@ def shop_nodes(format='csv', verbose=True):
             print("    Lat: {}, Lon: {}".format(node.lat, node.lon))
 
 
-#result = api.query("""
-#way(55.867,-3.417,56.021,-2.947)["highway"];
-#(._;>;);
-#out body;
-#""")
+
+
+
+def bike_paths(querystring, format='csv', verbose=True):
+    """
+    Retrieve Edinburgh bike paths from OSM
+    """
+    result = api.query(querystring)
+
+
+
+
 
 
 #for way in result.ways:
@@ -91,14 +106,57 @@ def shop_nodes(format='csv', verbose=True):
     #for node in way.nodes:
         #print("    Lat: %f, Lon: %f".format(node.lat, node.lon))
 
-if __name__ == "__main__":
+
+shop_query = """\
+    (
+    node["shop"](55.867,-3.417,56.021,-2.947);
+    way["shop"](55.867,-3.417,56.021,-2.947);
+    relation["shop"](55.867,-3.417,56.021,-2.947);
+    );
+    (._;>;);
+    out body;
+    """
 
 
+"""
+/*
+This shows the cycleway and cycleroute network.
+*/
+
+[out:json];
+
+(
+  // get cycle route relatoins
+  relation[route=bicycle]({{bbox}})->.cr;
+  // get cycleways
+  way[highway=cycleway]({{bbox}});
+  way[highway=path][bicycle=designated]({{bbox}});
+);
+
+out body;
+>;
+out skel qt;
+
+"""
+
+bikepath_query = """\
+    (
+    relation[route=bicycle](55.867,-3.417,56.021,-2.947);
+    way[highway=cycleway](55.867,-3.417,56.021,-2.947);
+    way[highway=path][bicycle=designated](55.867,-3.417,56.021,-2.947);
+    );
+    (._;>;);
+    out body;
+"""
+
+def extract_shops():
     fn = timestamped_csvfile('edinburgh_shops_from_osm')
 
     with open(fn, 'w', encoding='utf8') as csvfile:
         writer = csv.writer(csvfile, lineterminator='\n')
-        writer.writerows(shop_nodes())
+        writer.writerows(shop_nodes(shop_query))
         print("Written rows to {}".format(fn))
 
+if __name__ == "__main__":
+    extract_shops()
 
